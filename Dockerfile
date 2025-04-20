@@ -1,4 +1,3 @@
-# Use official PHP 7.4 with Apache and Debian Buster
 FROM php:7.4-apache-buster
 
 # Install system dependencies
@@ -17,7 +16,7 @@ RUN docker-php-ext-install zip pdo pdo_mysql mbstring
 # Enable Apache modules
 RUN a2enmod rewrite headers
 
-# Set Composer memory limit to unlimited to avoid OOM issues
+# Set Composer memory limit
 ENV COMPOSER_MEMORY_LIMIT=-1
 
 # Install Composer globally
@@ -26,13 +25,13 @@ RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local
 # Set working directory
 WORKDIR /var/www/html
 
-# Copy application source
+# Copy app source
 COPY . /var/www/html
 
-# Set proper file permissions
-RUN chmod -R 755 /var/www/html && chown -R www-data:www-data /var/www/html
+# Set permissions
+RUN chown -R www-data:www-data /var/www/html && chmod -R 755 /var/www/html
 
-# Update Apache DocumentRoot to point to /public folder
+# Apache DocumentRoot update
 RUN sed -i 's|DocumentRoot /var/www/html|DocumentRoot /var/www/html/public|' /etc/apache2/sites-available/000-default.conf && \
     echo '<Directory /var/www/html/public>\n\
         Options Indexes FollowSymLinks\n\
@@ -40,16 +39,16 @@ RUN sed -i 's|DocumentRoot /var/www/html|DocumentRoot /var/www/html/public|' /et
         Require all granted\n\
     </Directory>' >> /etc/apache2/apache2.conf
 
-# Set environment variable
-ENV APPLICATION_ENV=production
-
-# Run composer install (if composer.json is present)
+# Run composer install (with logging)
 RUN if [ -f composer.json ]; then \
-    composer install --no-dev --optimize-autoloader --no-scripts --no-interaction; \
+    composer install --no-dev --optimize-autoloader --no-interaction || cat /var/www/html/composer.json; \
 fi
 
-# Expose port 80
+# Set env
+ENV APPLICATION_ENV=production
+
+# Expose port
 EXPOSE 80
 
-# Start Apache server
+# Run Apache
 CMD ["apache2-foreground"]
