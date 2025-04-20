@@ -39,16 +39,24 @@ RUN sed -i 's|DocumentRoot /var/www/html|DocumentRoot /var/www/html/public|' /et
         Require all granted\n\
     </Directory>' >> /etc/apache2/apache2.conf
 
-# Run composer install (with logging)
+# Run composer install (with logging) and check for errors
 RUN if [ -f composer.json ]; then \
-    composer install --no-dev --optimize-autoloader --no-interaction || cat /var/www/html/composer.json; \
-fi
+    echo "Running composer install..."; \
+    composer install --no-dev --optimize-autoloader --no-interaction; \
+    else echo "No composer.json found"; \
+    fi
 
-# Set env
+# Check if vendor/autoload.php exists after install
+RUN if [ -f vendor/autoload.php ]; then \
+    echo "Composer dependencies installed successfully."; \
+    else echo "Error: Composer dependencies not installed. Please check the logs."; \
+    fi
+
+# Set environment variable
 ENV APPLICATION_ENV=production
 
-# Expose port
+# Expose port 80
 EXPOSE 80
 
-# Run Apache
+# Run Apache in the foreground
 CMD ["apache2-foreground"]
