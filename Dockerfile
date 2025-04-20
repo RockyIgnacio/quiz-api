@@ -17,7 +17,7 @@ RUN docker-php-ext-install zip pdo pdo_mysql mbstring
 RUN a2enmod rewrite headers
 
 # Fix the ServerName warning
-RUN echo "ServerName localhost" >> /etc/apache2/apache2.conf
+RUN printf "\nServerName localhost\n" >> /etc/apache2/apache2.conf && cat /etc/apache2/apache2.conf | grep ServerName
 
 # Install Composer
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
