@@ -1,33 +1,46 @@
-# Use the official PHP image with Apache
-FROM php:7.4-apache
+FROM php:7.4-apache-buster
 
-# Install required PHP extensions
-RUN docker-php-ext-install pdo pdo_mysql mysqli
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    git \
+    unzip \
+    libzip-dev \
+    zlib1g-dev \
+    default-libmysqlclient-dev \
+    libonig-dev \
+    && rm -rf /var/lib/apt/lists/*
 
-# Enable Apache mod_rewrite (commonly needed for frameworks)
-RUN a2enmod rewrite
+# Install PHP extensions
+RUN docker-php-ext-install zip pdo pdo_mysql mbstring
 
-# Fix the Apache ServerName warning
-RUN echo "ServerName localhost" >> /etc/apache2/apache2.conf
+# Enable Apache mod_rewrite (for .htaccess)
+RUN a2enmod rewrite headers
 
-# Replace default port 80 with 8080 (Railway expects 8080)
-RUN sed -i 's/Listen 80/Listen 8080/' /etc/apache2/ports.conf && \
-    sed -i 's/<VirtualHost \*:80>/<VirtualHost *:8080>/' /etc/apache2/sites-available/000-default.conf
+# Install Composer
+RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
 
-# Copy your app into the container (adjust path as needed)
-COPY . /var/www/html/
+# Set working directory
+WORKDIR /var/www/html
 
-# Set correct document root if your index is in /public
-# RUN sed -i 's|DocumentRoot /var/www/html|DocumentRoot /var/www/html/public|' /etc/apache2/sites-available/000-default.conf
+# Copy application files
+COPY . /var/www/html
 
-# Set permissions (optional: make this more specific if needed)
-RUN chown -R www-data:www-data /var/www/html
+# Set proper permissions (if needed)
+RUN chmod -R 755 /var/www/html && chown -R www-data:www-data /var/www/html
 
-# Expose port 8080
-EXPOSE 8080
+# Update default Apache site to point to /public
+RUN sed -i 's|DocumentRoot /var/www/html|DocumentRoot /var/www/html/public|' /etc/apache2/sites-available/000-default.conf && \
+    echo '<Directory /var/www/html/public>\n\
+        Options Indexes FollowSymLinks\n\
+        AllowOverride All\n\
+        Require all granted\n\
+    </Directory>' >> /etc/apache2/apache2.conf
 
-# Railway uses PORT env internally; this helps avoid binding issues
-ENV PORT=8080
+# Set environment variable
+ENV APPLICATION_ENV=production
 
-# Start Apache in the foreground
-CMD ["apache2ctl", "-D", "FOREGROUND"]
+# Expose the HTTP port
+EXPOSE 80
+
+# Start Apache
+CMD ["apache2-foreground"]
