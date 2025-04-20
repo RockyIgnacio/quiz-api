@@ -13,7 +13,7 @@ RUN apt-get update && apt-get install -y \
 # Install PHP extensions
 RUN docker-php-ext-install zip pdo pdo_mysql mbstring
 
-# Enable Apache mod_rewrite (for .htaccess)
+# Enable Apache mods for .htaccess support
 RUN a2enmod rewrite headers
 
 # Install Composer
@@ -22,16 +22,19 @@ RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local
 # Set working directory
 WORKDIR /var/www/html
 
-# Copy application files
-COPY . /var/www/html
+# Copy composer files first (for Docker cache)
+COPY composer.json composer.lock ./
 
-# Run Composer install (AFTER copying files)
+# Install PHP dependencies
 RUN composer install --prefer-dist --no-interaction --no-dev
+
+# Copy the rest of the application
+COPY . .
 
 # Set proper permissions
 RUN chmod -R 755 /var/www/html && chown -R www-data:www-data /var/www/html
 
-# Update default Apache site to point to /public
+# Update Apache config to point to /public directory
 RUN sed -i 's|DocumentRoot /var/www/html|DocumentRoot /var/www/html/public|' /etc/apache2/sites-available/000-default.conf && \
     echo '<Directory /var/www/html/public>\n\
         Options Indexes FollowSymLinks\n\
@@ -42,8 +45,8 @@ RUN sed -i 's|DocumentRoot /var/www/html|DocumentRoot /var/www/html/public|' /et
 # Set environment variable
 ENV APPLICATION_ENV=production
 
-# Expose the HTTP port
+# Expose Apache port
 EXPOSE 80
 
-# Start Apache
+# Start Apache in foreground
 CMD ["apache2-foreground"]
