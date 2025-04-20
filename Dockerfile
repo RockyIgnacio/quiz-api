@@ -1,12 +1,29 @@
-FROM php:7.0-apache
+FROM php:7.4-apache
 
-RUN apt-get update \
- && apt-get install -y git zlib1g-dev \
- && docker-php-ext-install zip \
- && a2enmod rewrite \
- && sed -i 's!/var/www/html!/var/www/public!g' /etc/apache2/sites-available/000-default.conf \
- && mv /var/www/html /var/www/public \
- && curl -sS https://getcomposer.org/installer \
-  | php -- --install-dir=/usr/local/bin --filename=composer
+# Enable Apache mod_rewrite
+RUN a2enmod rewrite
 
-WORKDIR /var/www
+# Install PHP zip extension and dependencies
+RUN apt-get update && apt-get install -y \
+    git \
+    unzip \
+    libzip-dev \
+    zlib1g-dev \
+    && docker-php-ext-install zip
+
+# Set the document root to /var/www/html/public
+ENV APACHE_DOCUMENT_ROOT /var/www/html/public
+
+# Update Apache config to use the new document root
+RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/*.conf
+
+# Copy your app code
+COPY . /var/www/html
+
+# Set working directory
+WORKDIR /var/www/html
+
+# Install Composer and app dependencies
+RUN curl -sS https://getcomposer.org/installer | php -- \
+    && mv composer.phar /usr/local/bin/composer \
+    && composer install --no-dev --optimize-autoloader
