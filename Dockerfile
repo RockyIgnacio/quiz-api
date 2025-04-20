@@ -1,13 +1,15 @@
+# Use the official PHP 7.4 image with Apache
 FROM php:7.4-apache
 
-# Install dependencies
+# Install necessary dependencies
 RUN apt-get update && apt-get install -y \
     git \
     unzip \
     libzip-dev \
     zlib1g-dev \
     && docker-php-ext-install zip pdo pdo_mysql mbstring \
-    && a2enmod rewrite
+    && a2enmod rewrite \
+    && rm -rf /var/lib/apt/lists/*  # Clean up to reduce image size
 
 # Install Composer
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
@@ -15,10 +17,10 @@ RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local
 # Set the working directory
 WORKDIR /var/www/html
 
-# Copy application files
+# Copy application files into the container
 COPY . /var/www/html
 
-# Set the environment variable for application environment
+# Set environment variable for application environment
 ENV APPLICATION_ENV=production
 
 # Expose the necessary port
