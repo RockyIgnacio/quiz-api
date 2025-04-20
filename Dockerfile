@@ -1,4 +1,5 @@
-FROM php:7.4-apache
+# Use the official PHP 7.4 image with Apache
+FROM php:7.4-apache-buster
 
 # Install necessary dependencies
 RUN apt-get update && apt-get install -y \
@@ -6,7 +7,7 @@ RUN apt-get update && apt-get install -y \
     unzip \
     libzip-dev \
     zlib1g-dev \
-    libmysqlclient-dev \
+    default-libmysqlclient-dev \
     libonig-dev \
     && rm -rf /var/lib/apt/lists/*  # Clean up to reduce image size
 
