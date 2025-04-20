@@ -9,16 +9,18 @@ RUN apt-get update && apt-get install -y \
     && docker-php-ext-install zip \
     && a2enmod rewrite
 
-# Set Apache to serve from /var/www/html/public
+# Change DocumentRoot to /var/www/html/public
 ENV APACHE_DOCUMENT_ROOT /var/www/html/public
 RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/*.conf
 
-# Copy app code into container
+# Copy code to container
 COPY . /var/www/html
 
+# Set working directory
 WORKDIR /var/www/html
 
-# Install Composer + App Dependencies
+# Composer install (separated for clarity)
 RUN curl -sS https://getcomposer.org/installer | php -- \
-    && mv composer.phar /usr/local/bin/composer \
-    && composer install --no-dev --optimize-autoloader --no-interaction --verbose
+    && mv composer.phar /usr/local/bin/composer
+
+RUN composer install --no-dev --optimize-autoloader --no-interaction --verbose
