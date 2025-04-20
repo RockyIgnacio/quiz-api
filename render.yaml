@@ -6,4 +6,4 @@ services:
     dockerfilePath: ./Dockerfile
     envVars:
       - key: APPLICATION_ENV
-        value: production
+        value: development
