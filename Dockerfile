@@ -5,9 +5,13 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
-    git unzip libzip-dev zlib1g-dev \
+    git \
+    unzip \
+    libzip-dev \
+    zlib1g-dev \
     && docker-php-ext-install zip pdo pdo_mysql mbstring \
-    && a2enmod rewrite headers
+    && a2enmod rewrite \
+    && apt-get clean
 
 # Set DocumentRoot to /var/www/html/public
 ENV APACHE_DOCUMENT_ROOT=/var/www/html/public
