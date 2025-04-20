@@ -4,6 +4,11 @@ services:
     env: docker
     plan: free
     dockerfilePath: ./Dockerfile
+    startCommand: "php -S 0.0.0.0:10000 -t public"  # Optional: If using PHP built-in server
     envVars:
       - key: APPLICATION_ENV
         value: development
+      - key: DB_URL
+        value: "your-database-url"  # Optional: Add any necessary environment variables here
+    regions:
+      - oregon  # Optional: Choose your region

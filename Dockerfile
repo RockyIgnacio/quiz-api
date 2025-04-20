@@ -1,46 +1,40 @@
-FROM php:7.4-apache-buster
+# Use official PHP-Apache image as base
+FROM php:7.4-apache
 
-# Install system dependencies
+# Install system dependencies and PHP extensions
 RUN apt-get update && apt-get install -y \
-    git \
     unzip \
     libzip-dev \
-    zlib1g-dev \
-    default-libmysqlclient-dev \
+    libpng-dev \
     libonig-dev \
-    && rm -rf /var/lib/apt/lists/*
+    libxml2-dev \
+    git \
+    && docker-php-ext-install pdo pdo_mysql zip
 
-# Install PHP extensions
-RUN docker-php-ext-install zip pdo pdo_mysql mbstring
-
-# Enable Apache mod_rewrite (for .htaccess)
-RUN a2enmod rewrite headers
-
-# Install Composer
-RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+# Enable Apache mod_rewrite
+RUN a2enmod rewrite
 
 # Set working directory
 WORKDIR /var/www/html
 
-# Copy application files
-COPY . /var/www/html
+# Copy app files
+COPY . /var/www/html/
 
-# Set proper permissions (if needed)
-RUN chmod -R 755 /var/www/html && chown -R www-data:www-data /var/www/html
+# Set document root to public/
+ENV APACHE_DOCUMENT_ROOT /var/www/html/public
 
-# Update default Apache site to point to /public
-RUN sed -i 's|DocumentRoot /var/www/html|DocumentRoot /var/www/html/public|' /etc/apache2/sites-available/000-default.conf && \
-    echo '<Directory /var/www/html/public>\n\
-        Options Indexes FollowSymLinks\n\
-        AllowOverride All\n\
-        Require all granted\n\
-    </Directory>' >> /etc/apache2/apache2.conf
+# Update Apache config to use public/ as document root
+RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/*.conf && \
+    sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf
 
-# Set environment variable
-ENV APPLICATION_ENV=production
+# Install Composer globally
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Expose the HTTP port
+# Run Composer to install dependencies
+RUN composer install --no-dev --optimize-autoloader
+
+# Set permissions (adjust this if needed based on your app structure)
+RUN chown -R www-data:www-data /var/www/html \
+    && chmod -R 755 /var/www/html
+
 EXPOSE 80
-
-# Start Apache
-CMD ["apache2-foreground"]
