@@ -13,25 +13,25 @@ RUN apt-get update && apt-get install -y \
 # Install PHP extensions
 RUN docker-php-ext-install zip pdo pdo_mysql mbstring
 
-# Enable Apache modules
+# Enable Apache mod_rewrite (for .htaccess) and headers
 RUN a2enmod rewrite headers
 
-# Set Composer memory limit
-ENV COMPOSER_MEMORY_LIMIT=-1
-
-# Install Composer globally
+# Install Composer
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
 
 # Set working directory
 WORKDIR /var/www/html
 
-# Copy app source
+# Copy application files
 COPY . /var/www/html
 
-# Set permissions
-RUN chown -R www-data:www-data /var/www/html && chmod -R 755 /var/www/html
+# Install PHP dependencies
+RUN composer install --no-dev --optimize-autoloader
 
-# Apache DocumentRoot update
+# Set proper permissions (if needed)
+RUN chmod -R 755 /var/www/html && chown -R www-data:www-data /var/www/html
+
+# Update default Apache site to point to /public
 RUN sed -i 's|DocumentRoot /var/www/html|DocumentRoot /var/www/html/public|' /etc/apache2/sites-available/000-default.conf && \
     echo '<Directory /var/www/html/public>\n\
         Options Indexes FollowSymLinks\n\
@@ -39,19 +39,13 @@ RUN sed -i 's|DocumentRoot /var/www/html|DocumentRoot /var/www/html/public|' /et
         Require all granted\n\
     </Directory>' >> /etc/apache2/apache2.conf
 
-# Debugging step: Check contents of /var/www/html before running composer install
-RUN echo "Listing contents of /var/www/html:" && ls -l /var/www/html && \
-    if [ -f composer.json ]; then \
-    echo "composer.json found, running composer install..."; \
-    composer install --no-dev --optimize-autoloader --no-interaction || { echo "Composer install failed!"; exit 1; }; \
-    else echo "No composer.json found, skipping composer install."; exit 1; \
-    fi
-
 # Set environment variable
-ENV APPLICATION_ENV=production
+ENV APPLICATION_ENV=development
 
-# Expose port 80
+# Expose the HTTP port
 EXPOSE 80
 
-# Run Apache in the foreground
+# Start Apache
 CMD ["apache2-foreground"]
+
+
