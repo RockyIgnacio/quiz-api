@@ -1,35 +1,28 @@
 FROM php:7.4-apache
 
-# Avoid tzdata errors and interactive prompts
-ENV DEBIAN_FRONTEND=noninteractive
-
-# Install system dependencies
+# Install dependencies
 RUN apt-get update && apt-get install -y \
     git \
     unzip \
     libzip-dev \
     zlib1g-dev \
     && docker-php-ext-install zip pdo pdo_mysql mbstring \
-    && a2enmod rewrite \
-    && apt-get clean
-
-# Set DocumentRoot to /var/www/html/public
-ENV APACHE_DOCUMENT_ROOT=/var/www/html/public
-RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/000-default.conf
-
-# Set working directory
-WORKDIR /var/www/html
-
-# Copy all app files
-COPY . .
+    && a2enmod rewrite
 
 # Install Composer
-RUN curl -sS https://getcomposer.org/installer | php && mv composer.phar /usr/local/bin/composer
+RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
 
-# Install PHP dependencies
-RUN composer install --no-dev --optimize-autoloader --no-interaction --verbose
+# Set the working directory
+WORKDIR /var/www/html
 
-# Optional: Set ENV
+# Copy application files
+COPY . /var/www/html
+
+# Set the environment variable for application environment
 ENV APPLICATION_ENV=production
 
+# Expose the necessary port
 EXPOSE 80
+
+# Start Apache in the background
+CMD ["apache2-foreground"]
