@@ -1,9 +1,0 @@
-services:
-  - type: web
-    name: quiz-api
-    env: docker
-    plan: free
-    dockerfilePath: ./Dockerfile
-    envVars:
-      - key: APPLICATION_ENV
-        value: development
